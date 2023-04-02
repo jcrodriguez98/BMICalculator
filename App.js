@@ -1,33 +1,95 @@
 import React, { Component } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, SafeAreaView, ScrollView, TextInput, Pressable, View } from 'react-native';
+import { Alert, StyleSheet, Text, SafeAreaView, ScrollView, TextInput, Pressable } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-//SplashScreen.preventAutoHideAsync();
-//setTimeout(SplashScreen.hideAsync, 2000);
+SplashScreen.preventAutoHideAsync();
+setTimeout(SplashScreen.hideAsync, 2000);
 
-const height = '@MyApp: height'
+const key = '@MyApp: key';
 
 export default class App extends Component {
+  state = {
+    height: '',
+    weight: '',
+    showBMI: false,
+    BMI: 0
+  };
+
+  constructor(props) {
+    super(props);
+    this.onLoad();
+  }
+  
+  onLoad = async () => {
+    try {
+      const height = await AsyncStorage.getItem(key);
+      this.setState({ height });
+    } catch (error) {
+      Alert.alert('Error', 'There was an error while loading the data');
+    }
+  } 
+  
+  calculateBMI = (weight, height) => {
+    BMI = 703 * (weight / (height * height));
+    return BMI.toFixed(2);
+  }
+
+  saveHeight = async () => {
+    const { height } = this.state;
+    this.setState({showBMI: true})
+
+    try {
+      await AsyncStorage.setItem(key, height);
+      Alert.alert('Saved', 'Successfully saved on device');
+    } catch (error) {
+      Alert.alert('Error', 'There was an error while saving the data');
+    }
+  }
+  
+  onChangeWeight = (weight) => {
+    this.setState({ weight, showBMI: false });
+  }
+  
+  onChangeHeight = (height) => {
+    this.setState({ height, showBMI: false });
+  }
+
+  onCalculate = () => {
+    const { weight, height } = this.state;
+    this.setState({ BMI: this.calculateBMI(weight, height), showBMI: true }, () => this.saveHeight());
+  }
 
   render() {
+    const { weight, height, showBMI, BMI } = this.state
+
     return (
       <SafeAreaView style={styles.container}>
         <Text style={styles.toolbar}>BMI Calculator</Text>
         <ScrollView style={styles.scrollview}>
           <TextInput
             style={styles.placeholder}
-            placeholder='Weight in Pounds' 
+            onChangeText={this.onChangeWeight}
+            value={weight}
+            keyboardType="numeric"
+            placeholder='Weight in Pounds'
           />
           <TextInput
-            style={styles.placeholder}
-            placeholder='Height in Inches' 
+            style={styles.placeholder} 
+            value={height}
+            onChangeText={this.onChangeHeight}
+            keyboardType="numeric" 
+            placeholder='Height in Inches'
           />
-          <Pressable style={styles.button}>
-            <Text style={styles.buttonText}>Compute BMI</Text>
+          <Pressable style={styles.button} onPress={this.onCalculate}>
+            <Text style={styles.buttonText}>Compute BMI</Text>         
           </Pressable>
-          <Text style={styles.bmi}>Body Mass Index is </Text>
+          {
+          (showBMI) ?
+          <Text style={styles.BMI}>Body Mass Index is {BMI}</Text> :
+          <Text style={styles.BMI}> </Text> 
+          }
           <Text style={styles.assignmentTitle}>Assessing Your BMI</Text>
           <Text style={styles.assignment}>Underweight: less than 18.5</Text>
           <Text style={styles.assignment}>Healthy: 18.5 to 24.9</Text>
@@ -79,7 +141,7 @@ const styles = StyleSheet.create({
     padding: 10,
     color: '#fff',
   },
-  bmi: {
+  BMI: {
     fontSize: 28,
     textAlign: 'center',
     padding: 30,
